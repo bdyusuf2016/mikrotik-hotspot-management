@@ -6,8 +6,7 @@ COPY packages/ packages/
 COPY apps/connector/ apps/connector/
 
 RUN npm install
-RUN npm run build --workspace=@hotspot/shared
-RUN npm run build --workspace=@hotspot/connector
+RUN npm run build:connector
 
 FROM node:20-alpine AS runner
 WORKDIR /app

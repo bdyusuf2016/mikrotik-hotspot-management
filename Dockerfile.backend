@@ -6,8 +6,7 @@ COPY packages/ packages/
 COPY apps/backend/ apps/backend/
 
 RUN npm install
-RUN npm run build --workspace=@hotspot/shared
-RUN npm run build --workspace=@hotspot/backend
+RUN npm run build:backend
 
 FROM node:20-alpine AS runner
 WORKDIR /app
