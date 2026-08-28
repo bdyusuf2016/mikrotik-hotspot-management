@@ -1,7 +1,7 @@
 import { useAuthStore } from '../stores/authStore.js';
 import type { ApiResponse } from '@hotspot/shared';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? 'https://hotspotbackend-production-4084.up.railway.app/api' : 'http://localhost:4000/api');
 
 export async function apiRequest<T>(
   endpoint: string,
