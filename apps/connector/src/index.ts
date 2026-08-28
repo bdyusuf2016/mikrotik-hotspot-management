@@ -1,8 +1,51 @@
 import dotenv from 'dotenv';
 import { z } from 'zod';
-import type { ConnectorCommand, ConnectorResponse } from '@hotspot/shared';
 
 dotenv.config();
+
+export type ConnectorAction =
+  | 'GET_RESOURCES'
+  | 'GET_INTERFACES'
+  | 'GET_HOTSPOT_USERS'
+  | 'CREATE_HOTSPOT_USER'
+  | 'UPDATE_HOTSPOT_USER'
+  | 'DELETE_HOTSPOT_USER'
+  | 'ENABLE_HOTSPOT_USER'
+  | 'DISABLE_HOTSPOT_USER'
+  | 'GET_ACTIVE_SESSIONS'
+  | 'DISCONNECT_ACTIVE_SESSION'
+  | 'GET_USER_PROFILES'
+  | 'CREATE_USER_PROFILE'
+  | 'GET_TRAFFIC_RATES'
+  | 'PING_TEST';
+
+export type CommandStatus = 'PENDING' | 'DISPATCHED' | 'COMPLETED' | 'FAILED' | 'TIMEOUT';
+
+export interface ConnectorCommand<T = unknown> {
+  commandId: string;
+  connectorId?: string;
+  action: ConnectorAction;
+  payload: T;
+  status: CommandStatus;
+  createdAt: string;
+  dispatchedAt?: string;
+  completedAt?: string;
+  timeoutMs?: number;
+  result?: ConnectorResponse;
+}
+
+export interface ConnectorResponse<T = unknown> {
+  commandId: string;
+  success: boolean;
+  data?: T;
+  error?: {
+    code: string;
+    message: string;
+    raw?: unknown;
+  };
+  executedAt: string;
+  durationMs: number;
+}
 
 const ConnectorEnvSchema = z.object({
   BACKEND_URL: z.string().default('http://localhost:4000/api'),
