@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
+    "prebuild": "npm --workspace=@hotspot/shared run build",
     "build": "tsc",
     "start": "node dist/server.js",
     "test": "vitest run",
