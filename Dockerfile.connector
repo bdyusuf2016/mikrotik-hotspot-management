@@ -2,8 +2,9 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 COPY package*.json ./
+COPY tsconfig.base.json ./
 COPY packages/ packages/
-COPY apps/connector/ apps/connector/
+COPY apps/ apps/
 
 RUN npm install
 RUN npm run build:connector
@@ -14,6 +15,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 COPY package*.json ./
+COPY tsconfig.base.json ./
 COPY packages/ packages/
 COPY apps/connector/package*.json ./apps/connector/
 

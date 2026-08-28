@@ -2,8 +2,9 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 COPY package*.json ./
+COPY tsconfig.base.json ./
 COPY packages/ packages/
-COPY apps/backend/ apps/backend/
+COPY apps/ apps/
 
 RUN npm install
 RUN npm run build:backend
@@ -15,6 +16,7 @@ ENV NODE_ENV=production
 ENV PORT=4000
 
 COPY package*.json ./
+COPY tsconfig.base.json ./
 COPY packages/ packages/
 COPY apps/backend/package*.json ./apps/backend/
 
