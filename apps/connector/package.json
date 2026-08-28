@@ -1,6 +1,6 @@
 {
   "name": "@hotspot/connector",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Lightweight Outbound VPN Connector Agent for MikroTik HotSpot System",
   "main": "./dist/index.js",
   "type": "module",
