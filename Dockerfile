@@ -14,11 +14,12 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=4000
+EXPOSE 4000
 
 COPY package*.json ./
 COPY tsconfig.base.json ./
 COPY packages/ packages/
-COPY apps/backend/package*.json ./apps/backend/
+COPY apps/ apps/
 
 RUN npm install --omit=dev
 

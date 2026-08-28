@@ -19,7 +19,7 @@ EXPOSE 8080
 COPY package*.json ./
 COPY tsconfig.base.json ./
 COPY packages/ packages/
-COPY apps/connector/package*.json ./apps/connector/
+COPY apps/ apps/
 
 RUN npm install --omit=dev
 
