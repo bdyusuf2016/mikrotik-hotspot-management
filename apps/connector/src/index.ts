@@ -1,3 +1,4 @@
+import http from 'node:http';
 import dotenv from 'dotenv';
 import { z } from 'zod';
 
@@ -209,7 +210,32 @@ class ConnectorAgent {
 const agent = new ConnectorAgent();
 agent.start().catch(console.error);
 
+// Built-in HTTP Healthcheck Server for Railway / Cloud monitoring
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 8080;
+const healthServer = http.createServer((_req, res) => {
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({
+    status: 'HEALTHY',
+    service: 'MikroTik HotSpot Connector Agent',
+    connectorId: config.CONNECTOR_ID,
+    backendUrl: config.BACKEND_URL,
+    uptimeSeconds: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString()
+  }));
+});
+
+healthServer.listen(PORT, '0.0.0.0', () => {
+  console.log(`🩺 Connector Healthcheck endpoint listening on 0.0.0.0:${PORT}`);
+});
+
 process.on('SIGINT', () => {
   agent.stop();
+  healthServer.close();
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  agent.stop();
+  healthServer.close();
   process.exit(0);
 });
