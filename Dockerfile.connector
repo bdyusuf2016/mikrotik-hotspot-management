@@ -1,13 +1,12 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-COPY package*.json ./
-COPY tsconfig.base.json ./
-COPY packages/ packages/
-COPY apps/ apps/
-
+COPY apps/connector/package*.json ./
 RUN npm install
-RUN npm run build:connector
+
+COPY apps/connector/tsconfig.json ./
+COPY apps/connector/src/ ./src/
+RUN npx tsc
 
 FROM node:20-alpine AS runner
 WORKDIR /app
@@ -16,14 +15,9 @@ ENV NODE_ENV=production
 ENV PORT=8080
 EXPOSE 8080
 
-COPY package*.json ./
-COPY tsconfig.base.json ./
-COPY packages/ packages/
-COPY apps/ apps/
-
+COPY apps/connector/package*.json ./
 RUN npm install --omit=dev
 
-COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
-COPY --from=builder /app/apps/connector/dist ./apps/connector/dist
+COPY --from=builder /app/dist ./dist
 
-CMD ["node", "apps/connector/dist/index.js"]
+CMD ["node", "dist/index.js"]

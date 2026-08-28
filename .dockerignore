@@ -1,0 +1,13 @@
+node_modules
+*/node_modules
+*/*/node_modules
+.git
+.github
+dist
+build
+.turbo
+.cache
+coverage
+*.log
+.env
+.env.*
