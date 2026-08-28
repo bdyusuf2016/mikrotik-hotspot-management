@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: hotspot-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hotspot_admin
+      POSTGRES_PASSWORD: SecureDbPassword_2026!
+      POSTGRES_DB: mikrotik_hotspot_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hotspot_admin -d mikrotik_hotspot_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: hotspot-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: 4000
+      NODE_ENV: production
+      DATABASE_URL: postgresql://hotspot_admin:SecureDbPassword_2026!@postgres:5432/mikrotik_hotspot_db?schema=public
+      JWT_SECRET: super_secure_jwt_secret_key_production_2026
+      JWT_REFRESH_SECRET: super_secure_refresh_token_secret_key_production_2026
+      CORS_ORIGIN: '*'
+      MIKROTIK_HOST: '10.10.13.38'
+      MIKROTIK_API_PORT: 8728
+      MIKROTIK_API_USER: api_hotspot_admin
+      MIKROTIK_API_PASSWORD: ApiSecurePassword123!
+      MIKROTIK_CONNECTION_MODE: CONNECTOR_AGENT
+      MIKROTIK_MOCK_MODE: 'false'
+    ports:
+      - "4000:4000"
+
+  connector:
+    build:
+      context: .
+      dockerfile: Dockerfile.connector
+    container_name: hotspot-connector
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NODE_ENV: production
+      BACKEND_URL: http://backend:4000/api
+      CONNECTOR_ID: prod-vps-connector-agent-1
+      CONNECTOR_TOKEN: dev_connector_token_placeholder
+      MIKROTIK_HOST: '10.10.13.38'
+      MIKROTIK_API_PORT: 8728
+      MOCK_MODE: 'false'
+
+volumes:
+  postgres_data:
+    driver: local

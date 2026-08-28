@@ -1,0 +1,38 @@
+{
+  "name": "mikrotik-hotspot-management-system",
+  "version": "1.0.0",
+  "description": "Production-ready MikroTik HotSpot Management System (GitHub-First + VPN-Based Architecture)",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:backend": "npm --workspace=apps/backend run dev",
+    "dev:frontend": "npm --workspace=apps/frontend run dev",
+    "dev:connector": "npm --workspace=apps/connector run dev",
+    "dev": "npm --workspace=apps/backend run dev",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "keywords": [
+    "mikrotik",
+    "hotspot",
+    "routeros",
+    "vpn",
+    "sstp",
+    "react",
+    "fastify",
+    "prisma",
+    "bangladesh",
+    "wifi-billing"
+  ],
+  "author": "Antigravity Engineering",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.13.5",
+    "typescript": "^5.7.3"
+  }
+}

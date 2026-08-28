@@ -1,0 +1,31 @@
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+COPY package*.json ./
+COPY packages/shared/package*.json ./packages/shared/
+COPY apps/connector/package*.json ./apps/connector/
+
+RUN npm ci --workspace=@hotspot/shared --workspace=@hotspot/connector
+
+COPY packages/shared ./packages/shared
+COPY apps/connector ./apps/connector
+COPY tsconfig.base.json ./
+
+RUN npm run build --workspace=@hotspot/shared
+RUN npm run build --workspace=@hotspot/connector
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY package*.json ./
+COPY packages/shared/package*.json ./packages/shared/
+COPY apps/connector/package*.json ./apps/connector/
+
+RUN npm ci --omit=dev --workspace=@hotspot/shared --workspace=@hotspot/connector
+
+COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
+COPY --from=builder /app/apps/connector/dist ./apps/connector/dist
+
+CMD ["node", "apps/connector/dist/index.js"]

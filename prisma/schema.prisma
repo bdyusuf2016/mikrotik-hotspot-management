@@ -1,0 +1,239 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  OPERATOR
+}
+
+enum UserStatus {
+  ACTIVE
+  EXPIRED
+  DISABLED
+  BLOCKED
+  UNUSED
+}
+
+enum VoucherStatus {
+  UNUSED
+  ACTIVATED
+  EXPIRED
+  DISABLED
+}
+
+enum ValidityMode {
+  FROM_FIRST_LOGIN
+  FROM_CREATION
+  ACCUMULATIVE
+}
+
+enum ConnectionMode {
+  MOCK
+  BACKEND_DIRECT_VPN
+  CONNECTOR_AGENT
+}
+
+enum ConnectorStatus {
+  ONLINE
+  OFFLINE
+  REVOKED
+  DISABLED
+}
+
+enum PaymentMethod {
+  CASH
+  BKASH
+  NAGAD
+  ROCKET
+  MANUAL
+  OTHER
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+model Admin {
+  id           String     @id @default(uuid())
+  username     String     @unique
+  email        String     @unique
+  fullName     String
+  passwordHash String
+  role         Role       @default(ADMIN)
+  isActive     Boolean    @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  auditLogs    AuditLog[]
+
+  @@map("admins")
+}
+
+model Router {
+  id                String         @id @default(uuid())
+  name              String
+  host              String         @default("10.10.13.38")
+  apiPort           Int            @default(8728)
+  apiSsl            Boolean        @default(false)
+  username          String         @default("api_admin")
+  encryptedPassword String
+  connectionMode    ConnectionMode @default(MOCK)
+  status            String         @default("CONNECTED")
+  lastConnectedAt   DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@map("routers")
+}
+
+model Connector {
+  id           String          @id @default(uuid())
+  name         String
+  tokenHash    String
+  status       ConnectorStatus @default(OFFLINE)
+  version      String          @default("1.0.0")
+  ipAddress    String?
+  systemInfo   Json?
+  lastSeenAt   DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@map("connectors")
+}
+
+model HotspotPackage {
+  id              String           @id @default(uuid())
+  name            String
+  durationMinutes Int
+  price           Float            @default(0.0)
+  downloadMbps    Float            @default(5.0)
+  uploadMbps      Float            @default(2.0)
+  dataLimitMB     Int?
+  sharedUsers     Int              @default(1)
+  sessionTimeout  Int?
+  idleTimeout     Int?
+  validityMode    ValidityMode     @default(FROM_FIRST_LOGIN)
+  status          String           @default("ACTIVE")
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  users           HotspotUser[]
+  vouchers        HotspotVoucher[]
+
+  @@map("hotspot_packages")
+}
+
+model HotspotUser {
+  id                        String          @id @default(uuid())
+  username                  String          @unique
+  mikrotikPasswordEncrypted String
+  fullName                  String?
+  phone                     String?
+  packageId                 String?
+  package                   HotspotPackage? @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  profileName               String          @default("HS-5M")
+  macAddress                String?
+  ipAddress                 String?
+  startAt                   DateTime?
+  expiresAt                 DateTime?
+  status                    UserStatus      @default(ACTIVE)
+  bytesIn                   BigInt          @default(0)
+  bytesOut                  BigInt          @default(0)
+  uptime                    Int             @default(0)
+  notes                     String?
+  createdAt                 DateTime        @default(now())
+  updatedAt                 DateTime        @updatedAt
+  sessions                  UserSession[]
+  payments                  Payment[]
+
+  @@map("hotspot_users")
+}
+
+model HotspotVoucher {
+  id          String         @id @default(uuid())
+  code        String         @unique
+  password    String
+  packageId   String
+  package     HotspotPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  batchId     String?
+  status      VoucherStatus  @default(UNUSED)
+  activatedBy String?
+  activatedAt DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime       @default(now())
+
+  @@map("hotspot_vouchers")
+}
+
+model UserSession {
+  id        String       @id @default(uuid())
+  userId    String?
+  user      HotspotUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  username  String
+  ipAddress String
+  macAddress String
+  loginAt   DateTime     @default(now())
+  logoutAt  DateTime?
+  uptime    Int          @default(0)
+  bytesIn   BigInt       @default(0)
+  bytesOut  BigInt       @default(0)
+
+  @@map("user_sessions")
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  userId        String?
+  user          HotspotUser?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  amount        Float
+  currency      String        @default("BDT")
+  method        PaymentMethod @default(CASH)
+  transactionId String?
+  status        PaymentStatus @default(COMPLETED)
+  receivedBy    String?
+  createdAt     DateTime      @default(now())
+
+  @@map("payments")
+}
+
+model TrafficUsage {
+  id           String   @id @default(uuid())
+  timestamp    DateTime @default(now())
+  downloadMbps Float    @default(0.0)
+  uploadMbps   Float    @default(0.0)
+  activeUsers  Int      @default(0)
+
+  @@map("traffic_usage")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  adminId   String?
+  admin     Admin?   @relation(fields: [adminId], references: [id], onDelete: SetNull)
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+model SystemSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("system_settings")
+}
