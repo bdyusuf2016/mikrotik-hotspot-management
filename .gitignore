@@ -15,6 +15,10 @@ build/
 .cache/
 coverage/
 
+# Always track pre-compiled shared library in Git
+!packages/shared/dist/
+!packages/shared/dist/**
+
 # Environment variables
 .env
 .env.local
