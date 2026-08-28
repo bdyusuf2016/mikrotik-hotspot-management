@@ -11,7 +11,7 @@ export class PortalTemplateService {
     const phone = settings.supportPhone || '01933814200';
     const credit = settings.developerCredit || 'Designed & Developed by Yusuf IT';
 
-    const activePackages = packages.filter(p => p.isActive).slice(0, 3);
+    const activePackages = packages.filter(p => p.status === 'ACTIVE').slice(0, 3);
     const pricingCardsHtml = activePackages.length > 0
       ? activePackages.map(p => {
           const durationStr = p.durationMinutes >= 1440

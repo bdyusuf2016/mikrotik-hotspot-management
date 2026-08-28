@@ -25,11 +25,12 @@ export async function buildApp() {
   // Safe JSON Body Parser handling empty bodies seamlessly
   app.addContentTypeParser('application/json', { parseAs: 'string' }, function (_req, body, done) {
     try {
-      if (!body || (typeof body === 'string' && body.trim() === '')) {
+      const strBody = typeof body === 'string' ? body : body?.toString('utf-8') || '';
+      if (!strBody.trim()) {
         done(null, {});
         return;
       }
-      const json = JSON.parse(body);
+      const json = JSON.parse(strBody);
       done(null, json);
     } catch (err) {
       done(err as Error, undefined);

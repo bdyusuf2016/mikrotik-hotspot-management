@@ -115,6 +115,25 @@ export class ConnectorMikroTikAdapter implements IMikroTikAdapter {
     return true;
   }
 
+  async getServerProfile(_name?: string) {
+    this.checkConnectorAvailability();
+    return {
+      id: '*1',
+      name: 'hsprof1',
+      hotspotAddress: '10.20.20.1',
+      dnsName: 'login.hotspot',
+      htmlDirectory: 'flash/hotspot',
+      loginBy: ['cookie', 'http-chap', 'http-pap', 'mac-cookie'],
+      httpCookieLifetime: '3d',
+      useRadius: false
+    };
+  }
+
+  async updateServerProfile(_updates: any, _name?: string) {
+    this.checkConnectorAvailability();
+    return true;
+  }
+
   async getTrafficRates(_interfaceName?: string) {
     this.checkConnectorAvailability();
     return { downloadMbps: 12.4, uploadMbps: 4.8, activeUsers: 0 };

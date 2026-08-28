@@ -1,5 +1,10 @@
 import { RouterOSSocketClient } from './routeros-socket.js';
-import type { IMikroTikAdapter, MikroTikUserConfig, MikroTikProfileConfig } from './interface.js';
+import type {
+  IMikroTikAdapter,
+  MikroTikUserConfig,
+  MikroTikProfileConfig,
+  HotspotServerProfileConfig
+} from './interface.js';
 import type { ActiveSession, RouterStatus, MikroTikResourceData } from '@hotspot/shared';
 import { RouterSafetyGuard } from '../../core/router-safety.guard.js';
 import { MikroTikError } from '../../core/errors.js';
@@ -10,6 +15,7 @@ export interface DirectAdapterOptions {
   useSsl: boolean;
   username: string;
   password?: string;
+  timeoutMs?: number;
 }
 
 export class DirectMikroTikAdapter implements IMikroTikAdapter {
@@ -22,7 +28,7 @@ export class DirectMikroTikAdapter implements IMikroTikAdapter {
       useSsl: this.config.useSsl,
       username: this.config.username,
       password: this.config.password || '',
-      timeoutMs: 5000
+      timeoutMs: this.config.timeoutMs || 5000
     });
   }
 
