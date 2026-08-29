@@ -5,6 +5,14 @@ import { authenticateToken } from '../middlewares/auth.middleware.js';
 export const reportRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.addHook('preHandler', authenticateToken);
 
+  fastify.get('/', async (request, reply) => {
+    const report = await reportService.getSalesReport(30);
+    return reply.send({
+      success: true,
+      data: report
+    });
+  });
+
   fastify.get('/sales', async (request, reply) => {
     const query = request.query as { days?: string };
     const days = query.days ? parseInt(query.days, 10) : 30;
