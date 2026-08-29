@@ -1,7 +1,7 @@
 import { useAuthStore } from '../stores/authStore.js';
 import type { ApiResponse } from '@hotspot/shared';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? 'https://mikrotik-hotspot-management.onrender.com/api' : 'http://localhost:4000/api');
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || (typeof window !== 'undefined' && (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') ? 'https://mikrotik-hotspot-management-production.up.railway.app/api' : 'http://localhost:4000/api');
 
 export async function apiRequest<T>(
   endpoint: string,
