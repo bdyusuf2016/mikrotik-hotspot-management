@@ -1,0 +1,54 @@
+services:
+  # 1. Backend REST API Service
+  - type: web
+    name: mikrotik-hotspot-backend
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm install && npm run build:backend
+    startCommand: node apps/backend/dist/server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        value: "*"
+      - key: CONNECTOR_SECRET
+        value: my_custom_secret_key_2026
+      - key: MIKROTIK_CONNECTION_MODE
+        value: MOCK
+      - key: MIKROTIK_MOCK_MODE
+        value: "true"
+
+  # 2. Connector Agent Service
+  - type: web
+    name: mikrotik-hotspot-connector
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm install && npm run build:connector
+    startCommand: node apps/connector/dist/index.js
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: CONNECTOR_ID
+        value: connector-cloud-1
+      - key: CONNECTOR_SECRET
+        value: my_custom_secret_key_2026
+      - key: MOCK_MODE
+        value: "true"
+      - key: BACKEND_URL
+        fromService:
+          type: web
+          name: mikrotik-hotspot-backend
+          property: url
+          path: /api
