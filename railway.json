@@ -1,0 +1,14 @@
+{
+  "services": {
+    "backend": {
+      "build": {
+        "dockerfile": "apps/backend/Dockerfile",
+        "context": "."
+      },
+      "port": 4000,
+      "environment": {
+        "MIKROTIK_CONNECTION_MODE": "CONNECTOR_AGENT"
+      }
+    }
+  }
+}

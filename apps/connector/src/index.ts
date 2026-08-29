@@ -52,9 +52,9 @@ const ConnectorEnvSchema = z.object({
   BACKEND_URL: z.string().default('https://mikrotik-hotspot-management.onrender.com/api'),
   CONNECTOR_ID: z.string().default('connector-cloud-1'),
   CONNECTOR_TOKEN: z.string().default(process.env.CONNECTOR_SECRET || process.env.CONNECTOR_TOKEN || 'my_custom_secret_key_2026'),
-  MIKROTIK_HOST: z.string().default('192.168.10.1'),
-  MIKROTIK_API_PORT: z.coerce.number().default(8729),
-  MIKROTIK_API_SSL: z.coerce.boolean().default(true),
+  MIKROTIK_HOST: z.string().default('10.10.13.38'),
+  MIKROTIK_API_PORT: z.coerce.number().default(8728),
+  MIKROTIK_API_SSL: z.coerce.boolean().default(false),
   HEARTBEAT_INTERVAL_MS: z.coerce.number().default(10000),
   COMMAND_POLL_INTERVAL_MS: z.coerce.number().default(3000),
   MOCK_MODE: z.coerce.boolean().default(false)
