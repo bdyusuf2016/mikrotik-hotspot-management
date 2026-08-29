@@ -84,6 +84,22 @@ export async function buildApp() {
     mock: env.MIKROTIK_MOCK_MODE
   }));
 
+  app.get('/api', async () => ({
+    success: true,
+    message: 'MikroTik HotSpot REST API v1.0',
+    endpoints: {
+      auth: '/api/auth/login',
+      dashboard: '/api/dashboard',
+      users: '/api/users',
+      packages: '/api/packages',
+      vouchers: '/api/vouchers',
+      mikrotik: '/api/mikrotik/status',
+      connectors: '/api/connectors',
+      reports: '/api/reports'
+    },
+    timestamp: new Date().toISOString()
+  }));
+
   // Register API Routes
   await app.register(authRoutes, { prefix: '/api/auth' });
   await app.register(dashboardRoutes, { prefix: '/api/dashboard' });
