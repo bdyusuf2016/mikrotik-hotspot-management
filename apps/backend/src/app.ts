@@ -64,7 +64,19 @@ export async function buildApp() {
   // Global Error Handler
   app.setErrorHandler(errorHandler);
 
-  // Health check endpoint
+  // Root welcome and health check endpoints
+  app.get('/', async () => ({
+    success: true,
+    service: 'MikroTik HotSpot Management System Backend API',
+    status: 'ONLINE',
+    version: '1.0.0',
+    mode: env.MIKROTIK_CONNECTION_MODE,
+    mock: env.MIKROTIK_MOCK_MODE,
+    apiPrefix: '/api',
+    healthCheck: '/health',
+    timestamp: new Date().toISOString()
+  }));
+
   app.get('/health', async () => ({
     status: 'ok',
     timestamp: new Date().toISOString(),
