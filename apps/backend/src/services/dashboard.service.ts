@@ -17,9 +17,25 @@ export class DashboardService {
     await dbStore.initialize();
     const mikrotik = MikroTikAdapterFactory.getAdapter(() => Array.from(dbStore.connectors.values()).filter(c => c.status === 'ONLINE').length);
 
-    const routerStatus = await mikrotik.getRouterStatus();
-    const activeSessions = await mikrotik.getActiveSessions();
-    const traffic = await mikrotik.getTrafficRates();
+    const routerStatus = await mikrotik.getRouterStatus().catch(() => ({
+      identity: 'MikroTik-HotSpot',
+      version: '7.24.1 (stable)',
+      model: 'RB951Ui-2HnD',
+      cpuLoad: 0,
+      freeMemoryMB: 0,
+      totalMemoryMB: 128,
+      freeHddMB: 0,
+      totalHddMB: 128,
+      uptime: '0s',
+      boardName: 'RB951Ui-2HnD',
+      connectionMode: 'CONNECTOR_AGENT',
+      isReachable: false,
+      apiConnected: false,
+      vpnConnected: false,
+      lastCheckedAt: new Date().toISOString()
+    }));
+    const activeSessions = await mikrotik.getActiveSessions().catch(() => []);
+    const traffic = await mikrotik.getTrafficRates().catch(() => ({ downloadMbps: 0, uploadMbps: 0, activeUsers: 0 }));
 
     const users = Array.from(dbStore.users.values());
     const totalUsers = users.length;
