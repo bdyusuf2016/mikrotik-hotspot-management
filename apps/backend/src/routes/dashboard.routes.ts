@@ -8,6 +8,14 @@ import { dbStore } from '../repositories/index.js';
 export const dashboardRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.addHook('preHandler', authenticateToken);
 
+  fastify.get('/', async (_request, reply) => {
+    const summary = await dashboardService.getSummary();
+    return reply.send({
+      success: true,
+      data: summary
+    });
+  });
+
   fastify.get('/summary', async (_request, reply) => {
     const summary = await dashboardService.getSummary();
     return reply.send({
