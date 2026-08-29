@@ -19,7 +19,8 @@ import { dbStore } from './repositories/index.js';
 export async function buildApp() {
   const app = Fastify({
     logger: env.NODE_ENV !== 'test',
-    trustProxy: true
+    trustProxy: true,
+    ignoreTrailingSlash: true
   });
 
   // Safe JSON Body Parser handling empty bodies seamlessly
