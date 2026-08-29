@@ -59,9 +59,9 @@ export const ConnectorRegisterSchema = z.object({
 });
 
 export const ConnectorHeartbeatSchema = z.object({
-  connectorId: z.string().uuid(),
-  version: z.string(),
-  timestamp: z.string().datetime(),
+  connectorId: z.string().min(1, 'Connector ID required'),
+  version: z.string().default('1.0.0'),
+  timestamp: z.string().default(() => new Date().toISOString()),
   status: z.enum(['ONLINE', 'OFFLINE', 'BUSY']).default('ONLINE'),
   systemStats: z.object({
     cpuUsagePercent: z.number().optional(),

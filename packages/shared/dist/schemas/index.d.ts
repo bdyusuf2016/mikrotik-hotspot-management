@@ -160,8 +160,8 @@ export declare const ConnectorRegisterSchema: z.ZodObject<{
 }>;
 export declare const ConnectorHeartbeatSchema: z.ZodObject<{
     connectorId: z.ZodString;
-    version: z.ZodString;
-    timestamp: z.ZodString;
+    version: z.ZodDefault<z.ZodString>;
+    timestamp: z.ZodDefault<z.ZodString>;
     status: z.ZodDefault<z.ZodEnum<["ONLINE", "OFFLINE", "BUSY"]>>;
     systemStats: z.ZodOptional<z.ZodObject<{
         cpuUsagePercent: z.ZodOptional<z.ZodNumber>;
@@ -188,9 +188,9 @@ export declare const ConnectorHeartbeatSchema: z.ZodObject<{
     } | undefined;
 }, {
     connectorId: string;
-    version: string;
-    timestamp: string;
     status?: "ONLINE" | "OFFLINE" | "BUSY" | undefined;
+    version?: string | undefined;
+    timestamp?: string | undefined;
     systemStats?: {
         canReachMikrotik: boolean;
         cpuUsagePercent?: number | undefined;

@@ -53,9 +53,9 @@ exports.ConnectorRegisterSchema = zod_1.z.object({
     systemInfo: zod_1.z.record(zod_1.z.any()).optional()
 });
 exports.ConnectorHeartbeatSchema = zod_1.z.object({
-    connectorId: zod_1.z.string().uuid(),
-    version: zod_1.z.string(),
-    timestamp: zod_1.z.string().datetime(),
+    connectorId: zod_1.z.string().min(1, 'Connector ID required'),
+    version: zod_1.z.string().default('1.0.0'),
+    timestamp: zod_1.z.string().default(() => new Date().toISOString()),
     status: zod_1.z.enum(['ONLINE', 'OFFLINE', 'BUSY']).default('ONLINE'),
     systemStats: zod_1.z.object({
         cpuUsagePercent: zod_1.z.number().optional(),
