@@ -49,7 +49,7 @@ export interface ConnectorResponse<T = unknown> {
 }
 
 const ConnectorEnvSchema = z.object({
-  BACKEND_URL: z.string().default('https://mikrotik-hotspot-management.onrender.com/api'),
+  BACKEND_URL: z.string().default(process.env.BACKEND_URL || 'https://mikrotik-hotspot-management-production.up.railway.app/api'),
   CONNECTOR_ID: z.string().default('connector-cloud-1'),
   CONNECTOR_TOKEN: z.string().default(process.env.CONNECTOR_SECRET || process.env.CONNECTOR_TOKEN || 'my_custom_secret_key_2026'),
   MIKROTIK_HOST: z.string().default('10.10.13.38'),
