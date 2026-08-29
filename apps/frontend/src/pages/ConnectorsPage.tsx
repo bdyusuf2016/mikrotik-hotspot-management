@@ -180,17 +180,24 @@ export const ConnectorsPage: React.FC = () => {
     setTestLoading(true);
     setTestResult(null);
     try {
-      const res = await apiRequest<TestResult>('/mikrotik/test-custom', {
-        method: 'POST',
-        body: JSON.stringify({
-          host: routerHost,
-          port: routerPort,
-          useSsl,
-          username: routerUser,
-          password: routerPass || undefined
-        })
-      });
-      setTestResult(res);
+      if (connectionMode === 'CONNECTOR_AGENT') {
+        const res = await apiRequest<TestResult>('/mikrotik/test', {
+          method: 'POST'
+        });
+        setTestResult(res);
+      } else {
+        const res = await apiRequest<TestResult>('/mikrotik/test-custom', {
+          method: 'POST',
+          body: JSON.stringify({
+            host: routerHost,
+            port: routerPort,
+            useSsl,
+            username: routerUser,
+            password: routerPass || undefined
+          })
+        });
+        setTestResult(res);
+      }
     } catch (err: any) {
       setTestResult({
         reachable: false,
