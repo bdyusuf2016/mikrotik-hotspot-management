@@ -15,6 +15,40 @@ function getRouterLimitUptime(durationMinutes: number): string {
   return `${durationMinutes * 60}s`;
 }
 
+function findMatchingPackage(comment?: string, profile?: string, limitUptime?: string) {
+  const allPkgs = Array.from(dbStore.packages.values());
+  if (comment) {
+    for (const pkg of allPkgs) {
+      if (comment.toLowerCase().includes(pkg.name.toLowerCase())) {
+        return pkg;
+      }
+    }
+  }
+  if (profile) {
+    const mbpsMatch = profile.match(/HS-(\d+)M/i);
+    if (mbpsMatch) {
+      const mbps = parseInt(mbpsMatch[1], 10);
+      const pkg = allPkgs.find(p => p.downloadMbps === mbps);
+      if (pkg) return pkg;
+    }
+  }
+  if (limitUptime) {
+    const norm = limitUptime.toLowerCase();
+    if (norm === '1h' || norm === '60m') return allPkgs.find(p => p.id === 'pkg-1h');
+    if (norm === '1d' || norm === '24h') return allPkgs.find(p => p.id === 'pkg-1d');
+    if (norm === '1w' || norm === '7d') return allPkgs.find(p => p.id === 'pkg-7d');
+    if (norm === '4w2d' || norm === '30d') return allPkgs.find(p => p.id === 'pkg-30d');
+  }
+  return allPkgs[0] || undefined;
+}
+
+function extractBatchId(comment?: string): string {
+  if (!comment) return 'BATCH-ROUTER';
+  const match = comment.match(/Batch:\s*([A-Za-z0-9-_]+)/i);
+  if (match) return match[1];
+  return 'BATCH-ROUTER';
+}
+
 export class VoucherService {
   private getAdapter() {
     return MikroTikAdapterFactory.getAdapter(() => Array.from(dbStore.connectors.values()).filter(c => c.status === 'ONLINE').length);
@@ -23,7 +57,7 @@ export class VoucherService {
   async getAllVouchers(packageId?: string, status?: string): Promise<HotspotVoucher[]> {
     await dbStore.initialize();
     
-    // Sync voucher status with real-time RouterOS active sessions and usage
+    // Sync voucher status with real-time RouterOS active sessions and router users
     try {
       const mikrotik = this.getAdapter();
       const [activeSessions, routerUsers] = await Promise.all([
@@ -32,23 +66,81 @@ export class VoucherService {
       ]);
 
       const activeUsernames = new Set(activeSessions.map(s => s.username.toLowerCase()));
-      const userUsageMap = new Map<string, { uptime?: string; bytesIn?: number; bytesOut?: number }>();
-      for (const u of routerUsers) {
-        userUsageMap.set(u.name.toLowerCase(), {
-          uptime: u.uptime,
-          bytesIn: u.bytesIn,
-          bytesOut: u.bytesOut
-        });
+      const userUsageMap = new Map<string, { uptime?: string; bytesIn?: number; bytesOut?: number; disabled?: boolean }>();
+      
+      const existingVouchersByCode = new Map<string, HotspotVoucher>();
+      for (const v of dbStore.vouchers.values()) {
+        existingVouchersByCode.set(v.code.toLowerCase(), v);
       }
 
       const now = new Date();
+
+      // 1. Sync & auto-import all vouchers from MikroTik RouterOS
+      for (const u of routerUsers) {
+        if (!u.name || u.name.toLowerCase() === 'admin' || u.name.toLowerCase() === 'default-trial') {
+          continue;
+        }
+
+        const lowerCode = u.name.toLowerCase();
+        userUsageMap.set(lowerCode, {
+          uptime: u.uptime,
+          bytesIn: u.bytesIn,
+          bytesOut: u.bytesOut,
+          disabled: u.disabled
+        });
+
+        const isVoucher = lowerCode.startsWith('hs-') || (u.comment && u.comment.toLowerCase().includes('voucher'));
+        if (isVoucher) {
+          const isActive = activeUsernames.has(lowerCode);
+          const hasUsage = (u.uptime && u.uptime !== '0s') || (u.bytesIn || 0) > 0 || (u.bytesOut || 0) > 0;
+          
+          let voucherStatus: 'UNUSED' | 'ACTIVATED' | 'EXPIRED' | 'DISABLED' = 'UNUSED';
+          if (u.disabled) {
+            voucherStatus = 'DISABLED';
+          } else if (isActive || hasUsage) {
+            voucherStatus = 'ACTIVATED';
+          }
+
+          let existing = existingVouchersByCode.get(lowerCode);
+          if (!existing) {
+            const matchedPkg = findMatchingPackage(u.comment, u.profile, u.limitUptime);
+            const batchId = extractBatchId(u.comment);
+            const newVoucher: HotspotVoucher = {
+              id: `vch-${u.id ? u.id.replace(/[^a-zA-Z0-9]/g, '') : u.name}`,
+              code: u.name,
+              password: u.password || u.name,
+              packageId: matchedPkg?.id || 'pkg-1d',
+              package: matchedPkg,
+              batchId: batchId,
+              status: voucherStatus,
+              createdAt: new Date().toISOString(),
+              activatedAt: (isActive || hasUsage) ? new Date().toISOString() : undefined
+            };
+            dbStore.vouchers.set(newVoucher.id, newVoucher);
+            existingVouchersByCode.set(lowerCode, newVoucher);
+          } else {
+            if (u.disabled) {
+              existing.status = 'DISABLED';
+            } else if (existing.status === 'UNUSED' && (isActive || hasUsage)) {
+              existing.status = 'ACTIVATED';
+              existing.activatedAt = existing.activatedAt || now.toISOString();
+            }
+            dbStore.vouchers.set(existing.id, existing);
+          }
+        }
+      }
+
+      // 2. Refresh status for existing vouchers
       for (const v of dbStore.vouchers.values()) {
         const lowerCode = v.code.toLowerCase();
         const isActive = activeUsernames.has(lowerCode);
         const usage = userUsageMap.get(lowerCode);
         const hasUsage = usage && ((usage.uptime && usage.uptime !== '0s') || (usage.bytesIn || 0) > 0 || (usage.bytesOut || 0) > 0);
 
-        if (v.status === 'UNUSED' && (isActive || hasUsage)) {
+        if (usage?.disabled) {
+          v.status = 'DISABLED';
+          dbStore.vouchers.set(v.id, v);
+        } else if (v.status === 'UNUSED' && (isActive || hasUsage)) {
           const pkg = dbStore.packages.get(v.packageId);
           v.status = 'ACTIVATED';
           v.activatedAt = v.activatedAt || now.toISOString();
@@ -63,8 +155,9 @@ export class VoucherService {
           }
         }
       }
-    } catch {
+    } catch (err) {
       // If router query fails temporarily, serve existing local state
+      console.warn('Voucher router sync warning:', err);
     }
 
     let vouchers = Array.from(dbStore.vouchers.values());

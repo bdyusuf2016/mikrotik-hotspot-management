@@ -15,6 +15,49 @@ function getRouterLimitUptime(durationMinutes: number): string {
   return `${durationMinutes * 60}s`;
 }
 
+function parseUptimeToSeconds(uptime?: string): number {
+  if (!uptime || uptime === '0s') return 0;
+  let totalSeconds = 0;
+  const weeks = uptime.match(/(\d+)w/);
+  const days = uptime.match(/(\d+)d/);
+  const hours = uptime.match(/(\d+)h/);
+  const minutes = uptime.match(/(\d+)m(?!s)/);
+  const seconds = uptime.match(/(\d+)s/);
+  if (weeks) totalSeconds += parseInt(weeks[1], 10) * 7 * 86400;
+  if (days) totalSeconds += parseInt(days[1], 10) * 86400;
+  if (hours) totalSeconds += parseInt(hours[1], 10) * 3600;
+  if (minutes) totalSeconds += parseInt(minutes[1], 10) * 60;
+  if (seconds) totalSeconds += parseInt(seconds[1], 10);
+  return totalSeconds;
+}
+
+function findMatchingPackageForUser(comment?: string, profile?: string, limitUptime?: string) {
+  const allPkgs = Array.from(dbStore.packages.values());
+  if (comment) {
+    for (const pkg of allPkgs) {
+      if (comment.toLowerCase().includes(pkg.name.toLowerCase())) {
+        return pkg;
+      }
+    }
+  }
+  if (profile) {
+    const mbpsMatch = profile.match(/HS-(\d+)M/i);
+    if (mbpsMatch) {
+      const mbps = parseInt(mbpsMatch[1], 10);
+      const pkg = allPkgs.find(p => p.downloadMbps === mbps);
+      if (pkg) return pkg;
+    }
+  }
+  if (limitUptime) {
+    const norm = limitUptime.toLowerCase();
+    if (norm === '1h' || norm === '60m') return allPkgs.find(p => p.id === 'pkg-1h');
+    if (norm === '1d' || norm === '24h') return allPkgs.find(p => p.id === 'pkg-1d');
+    if (norm === '1w' || norm === '7d') return allPkgs.find(p => p.id === 'pkg-7d');
+    if (norm === '4w2d' || norm === '30d') return allPkgs.find(p => p.id === 'pkg-30d');
+  }
+  return allPkgs[0] || undefined;
+}
+
 export class UserService {
   private getAdapter() {
     return MikroTikAdapterFactory.getAdapter(() => Array.from(dbStore.connectors.values()).filter(c => c.status === 'ONLINE').length);
@@ -22,6 +65,70 @@ export class UserService {
 
   async getAllUsers(): Promise<HotspotUser[]> {
     await dbStore.initialize();
+
+    try {
+      const mikrotik = this.getAdapter();
+      const [activeSessions, routerUsers] = await Promise.all([
+        mikrotik.getActiveSessions().catch(() => []),
+        mikrotik.getHotspotUsers().catch(() => [])
+      ]);
+
+      const activeUserMap = new Map(activeSessions.map(s => [s.username.toLowerCase(), s]));
+      const existingUsersByUsername = new Map<string, HotspotUser>();
+      for (const u of dbStore.users.values()) {
+        existingUsersByUsername.set(u.username.toLowerCase(), u);
+      }
+
+      for (const ru of routerUsers) {
+        if (!ru.name || ru.name.toLowerCase() === 'admin' || ru.name.toLowerCase() === 'default-trial') {
+          continue;
+        }
+
+        const lowerName = ru.name.toLowerCase();
+        const isVoucherLike = lowerName.startsWith('hs-') || (ru.comment && ru.comment.toLowerCase().includes('voucher'));
+
+        // Import non-voucher hotspot users or existing tracked users
+        if (!isVoucherLike || existingUsersByUsername.has(lowerName)) {
+          const session = activeUserMap.get(lowerName);
+          let existing = existingUsersByUsername.get(lowerName);
+
+          const userStatus: 'ACTIVE' | 'DISABLED' | 'UNUSED' = ru.disabled
+            ? 'DISABLED'
+            : (session || (ru.uptime && ru.uptime !== '0s') || (ru.bytesIn || 0) > 0 ? 'ACTIVE' : 'UNUSED');
+
+          if (!existing) {
+            const matchedPkg = findMatchingPackageForUser(ru.comment, ru.profile, ru.limitUptime);
+            const newUser: HotspotUser = {
+              id: `usr-${ru.id ? ru.id.replace(/[^a-zA-Z0-9]/g, '') : ru.name}`,
+              username: ru.name,
+              fullName: ru.name,
+              packageId: matchedPkg?.id || 'pkg-1h',
+              packageName: matchedPkg?.name || 'Custom',
+              profileName: ru.profile || 'default',
+              status: userStatus,
+              bytesIn: ru.bytesIn || 0,
+              bytesOut: ru.bytesOut || 0,
+              uptime: parseUptimeToSeconds(ru.uptime),
+              notes: ru.comment,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            };
+            dbStore.users.set(newUser.id, newUser);
+            existingUsersByUsername.set(lowerName, newUser);
+          } else {
+            existing.status = userStatus;
+            existing.bytesIn = ru.bytesIn || existing.bytesIn;
+            existing.bytesOut = ru.bytesOut || existing.bytesOut;
+            if (ru.uptime) existing.uptime = parseUptimeToSeconds(ru.uptime);
+            if (ru.comment) existing.notes = ru.comment;
+            dbStore.users.set(existing.id, existing);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('User router sync warning:', err);
+    }
+
     return Array.from(dbStore.users.values());
   }
 

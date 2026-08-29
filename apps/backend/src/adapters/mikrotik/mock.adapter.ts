@@ -18,6 +18,7 @@ interface InternalMockUser {
   ipAddress?: string;
   comment?: string;
   disabled: boolean;
+  limitUptime?: string;
   bytesIn: number;
   bytesOut: number;
   uptime: number;
@@ -110,14 +111,16 @@ export class MockMikroTikAdapter implements IMikroTikAdapter {
     ];
   }
 
-  async getHotspotUsers(): Promise<Array<{ id: string; name: string; profile: string; comment?: string; disabled: boolean; uptime?: string; bytesIn?: number; bytesOut?: number }>> {
+  async getHotspotUsers(): Promise<Array<{ id: string; name: string; password?: string; profile: string; comment?: string; disabled: boolean; uptime?: string; bytesIn?: number; bytesOut?: number; limitUptime?: string }>> {
     return Array.from(this.users.values()).map(u => ({
       id: u.id,
       name: u.name,
+      password: u.password || u.name,
       profile: u.profile,
       comment: u.comment,
       disabled: u.disabled,
       uptime: `${Math.floor(u.uptime / 3600)}h ${Math.floor((u.uptime % 3600) / 60)}m`,
+      limitUptime: u.limitUptime,
       bytesIn: u.bytesIn,
       bytesOut: u.bytesOut
     }));
@@ -137,6 +140,7 @@ export class MockMikroTikAdapter implements IMikroTikAdapter {
       ipAddress: user.ipAddress,
       comment: user.comment,
       disabled: !!user.disabled,
+      limitUptime: user.limitUptime,
       bytesIn: 0,
       bytesOut: 0,
       uptime: 0

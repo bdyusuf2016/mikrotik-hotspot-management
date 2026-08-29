@@ -42,7 +42,7 @@ export interface IMikroTikAdapter {
   getResources(): Promise<MikroTikResourceData>;
   getRouterStatus(): Promise<RouterStatus>;
   getInterfaces(): Promise<Array<{ name: string; type: string; running: boolean; rxByte: number; txByte: number; comment?: string }>>;
-  getHotspotUsers(): Promise<Array<{ id: string; name: string; profile: string; comment?: string; disabled: boolean; uptime?: string; bytesIn?: number; bytesOut?: number }>>;
+  getHotspotUsers(): Promise<Array<{ id: string; name: string; password?: string; profile: string; comment?: string; disabled: boolean; uptime?: string; bytesIn?: number; bytesOut?: number; limitUptime?: string }>>;
   createHotspotUser(user: MikroTikUserConfig): Promise<{ id: string; name: string }>;
   updateHotspotUser(name: string, updates: Partial<MikroTikUserConfig>): Promise<boolean>;
   deleteHotspotUser(name: string): Promise<boolean>;

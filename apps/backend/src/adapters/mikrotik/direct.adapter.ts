@@ -145,7 +145,7 @@ export class DirectMikroTikAdapter implements IMikroTikAdapter {
     }
   }
 
-  async getHotspotUsers(): Promise<Array<{ id: string; name: string; profile: string; comment?: string; disabled: boolean; uptime?: string; bytesIn?: number; bytesOut?: number; limitUptime?: string }>> {
+  async getHotspotUsers(): Promise<Array<{ id: string; name: string; password?: string; profile: string; comment?: string; disabled: boolean; uptime?: string; bytesIn?: number; bytesOut?: number; limitUptime?: string }>> {
     const client = this.getClient();
     try {
       await client.connect();
@@ -153,6 +153,7 @@ export class DirectMikroTikAdapter implements IMikroTikAdapter {
       return res.filter(s => s.type === '!re').map(s => ({
         id: s.attributes['.id'] || s.attributes.name,
         name: s.attributes.name,
+        password: s.attributes.password || s.attributes.name,
         profile: s.attributes.profile,
         comment: s.attributes.comment,
         disabled: s.attributes.disabled === 'true',

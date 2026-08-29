@@ -3,8 +3,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '../api/client.js';
 import { useLocaleStore } from '../stores/localeStore.js';
 import { PrintableVouchers } from '../components/PrintableVouchers.js';
+import { VoucherShareModal } from '../components/VoucherShareModal.js';
+import { downloadVouchersHtmlFile } from '../utils/htmlExporter.js';
 import QRCode from 'qrcode';
-import type { HotspotVoucher, HotspotPackage } from '@hotspot/shared';
+import type { HotspotVoucher, HotspotPackage, SystemSettings } from '@hotspot/shared';
 import {
   Ticket,
   Plus,
@@ -19,7 +21,10 @@ import {
   Download,
   Trash2,
   AlertTriangle,
-  X
+  X,
+  RefreshCw,
+  Share2,
+  FileCode
 } from 'lucide-react';
 
 export const VouchersPage: React.FC = () => {
@@ -36,6 +41,7 @@ export const VouchersPage: React.FC = () => {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [voucherToDelete, setVoucherToDelete] = useState<HotspotVoucher | null>(null);
+  const [selectedVoucherForShare, setSelectedVoucherForShare] = useState<HotspotVoucher | null>(null);
   const [isClearAllConfirmOpen, setIsClearAllConfirmOpen] = useState(false);
 
   // Generator form
@@ -52,6 +58,11 @@ export const VouchersPage: React.FC = () => {
   const { data: packages = [] } = useQuery<HotspotPackage[]>({
     queryKey: ['packages'],
     queryFn: () => apiRequest<HotspotPackage[]>('/packages')
+  });
+
+  const { data: settings } = useQuery<SystemSettings>({
+    queryKey: ['settings'],
+    queryFn: () => apiRequest<SystemSettings>('/settings')
   });
 
   const generateMutation = useMutation({
@@ -140,6 +151,25 @@ export const VouchersPage: React.FC = () => {
     document.body.removeChild(link);
   };
 
+  const [isExportingHtml, setIsExportingHtml] = useState(false);
+
+  const handleDownloadHtml = async () => {
+    if (filteredVouchers.length === 0) return;
+    setIsExportingHtml(true);
+    try {
+      await downloadVouchersHtmlFile({
+        vouchers: filteredVouchers,
+        settings,
+        hotspotAddress: '10.20.20.1',
+        filename: `vouchers_sheet_${new Date().toISOString().slice(0, 10)}.html`
+      });
+    } catch (err) {
+      console.error('HTML export error:', err);
+    } finally {
+      setIsExportingHtml(false);
+    }
+  };
+
   const filteredVouchers = vouchers.filter((v) => {
     const matchesSearch =
       v.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -163,6 +193,15 @@ export const VouchersPage: React.FC = () => {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => queryClient.invalidateQueries({ queryKey: ['vouchers'] })}
+            disabled={isLoading}
+            className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-semibold text-slate-200 transition disabled:opacity-40"
+            title="MikroTik Router থেকে ভাউচার রিফ্রেশ ও সিঙ্ক করুন"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-brand-400' : 'text-brand-400'}`} />
+            <span>রাউটার সিঙ্ক</span>
+          </button>
           {vouchers.length > 0 && (
             <button
               onClick={() => setIsClearAllConfirmOpen(true)}
@@ -179,7 +218,16 @@ export const VouchersPage: React.FC = () => {
             className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-semibold text-slate-200 transition disabled:opacity-40"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>এক্সপোর্ট (CSV)</span>
+            <span>CSV</span>
+          </button>
+          <button
+            onClick={handleDownloadHtml}
+            disabled={filteredVouchers.length === 0 || isExportingHtml}
+            className="flex items-center gap-1.5 px-3 py-2 bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-700/60 rounded-xl text-xs font-bold text-emerald-300 transition disabled:opacity-40 shadow-sm"
+            title="শেয়ার বাটন ও কিউআর কোডসহ অফলাইন HTML ফাইল ডাউনলোড করুন"
+          >
+            <FileCode className="w-3.5 h-3.5 text-emerald-400" />
+            <span>{isExportingHtml ? 'তৈরি হচ্ছে...' : 'এক্সপোর্ট (HTML)'}</span>
           </button>
           <button
             onClick={() => setIsPrintModalOpen(true)}
@@ -293,7 +341,20 @@ export const VouchersPage: React.FC = () => {
                       </div>
                     </td>
                     <td className="py-3.5 px-4 font-mono text-slate-200">
-                      {v.password || '—'}
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold text-brand-300">{v.password || v.code}</span>
+                        <button
+                          onClick={() => copyToClipboard(v.password || v.code)}
+                          className="text-slate-500 hover:text-slate-300 transition"
+                          title="Copy Password/PIN"
+                        >
+                          {copiedCode === (v.password || v.code) ? (
+                            <Check className="w-3 h-3 text-emerald-400" />
+                          ) : (
+                            <Copy className="w-3 h-3" />
+                          )}
+                        </button>
+                      </div>
                     </td>
                     <td className="py-3.5 px-4 font-medium text-slate-200">
                       {v.package?.name || '—'}
@@ -319,6 +380,13 @@ export const VouchersPage: React.FC = () => {
                     </td>
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => setSelectedVoucherForShare(v)}
+                          className="p-1.5 bg-slate-800 hover:bg-emerald-950/80 text-emerald-400 border border-slate-700 hover:border-emerald-600/50 rounded-lg text-xs transition"
+                          title="ভাউচার শেয়ার ও ইমেজ ডাউনলোড (Share / Download PNG Card)"
+                        >
+                          <Share2 className="w-3.5 h-3.5" />
+                        </button>
                         <button
                           onClick={() => openQrModal(v)}
                           className="p-1.5 bg-slate-800 hover:bg-slate-700 text-sky-400 rounded-lg text-xs transition"
@@ -531,20 +599,46 @@ export const VouchersPage: React.FC = () => {
               মোবাইলের ক্যামেরা দিয়ে স্ক্যান করলে সরাসরি হটস্পটে অটো-লগইন হবে।
             </p>
 
-            <button
-              onClick={() => setIsQrModalOpen(false)}
-              className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold transition"
-            >
-              বন্ধ করুন
-            </button>
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                onClick={() => {
+                  const target = selectedVoucherForQr;
+                  setIsQrModalOpen(false);
+                  setSelectedVoucherForShare(target);
+                }}
+                className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                <span>শেয়ার ও ডাউনলোড</span>
+              </button>
+              <button
+                onClick={() => setIsQrModalOpen(false)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition"
+              >
+                বন্ধ করুন
+              </button>
+            </div>
           </div>
         </div>
+      )}
+
+      {/* Single Voucher Share & Image Attachment Modal */}
+      {selectedVoucherForShare && (
+        <VoucherShareModal
+          voucher={selectedVoucherForShare}
+          settings={settings}
+          hotspotAddress="10.20.20.1"
+          onClose={() => setSelectedVoucherForShare(null)}
+        />
       )}
 
       {/* Printable Vouchers Modal */}
       {isPrintModalOpen && (
         <PrintableVouchers
           vouchers={filteredVouchers}
+          businessName={settings?.businessName || 'Yusuf Computer & IT'}
+          supportPhone={settings?.supportPhone || '01933814200'}
+          hotspotAddress="10.20.20.1"
           onClose={() => setIsPrintModalOpen(false)}
         />
       )}

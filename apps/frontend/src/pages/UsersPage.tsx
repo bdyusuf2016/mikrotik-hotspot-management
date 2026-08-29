@@ -21,7 +21,8 @@ import {
   X,
   Copy,
   Check,
-  AlertCircle
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 
 export const UsersPage: React.FC = () => {
@@ -261,13 +262,24 @@ export const UsersPage: React.FC = () => {
           <p className="text-xs text-slate-400 mt-1">সক্রিয়, মেয়াদোত্তীর্ণ ও ব্লকড হটস্পট অ্যাকাউন্ট নিয়ন্ত্রণ করুন</p>
         </div>
 
-        <button
-          onClick={openCreateModal}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl font-bold shadow-lg shadow-brand-500/20 transition text-sm"
-        >
-          <UserPlus className="w-4 h-4" />
-          <span>{t.btn_add_user}</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => queryClient.invalidateQueries({ queryKey: ['hotspot-users'] })}
+            disabled={isLoading}
+            className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl font-semibold transition text-xs md:text-sm disabled:opacity-40"
+            title="MikroTik Router থেকে গ্রাহক তালিকা রিফ্রেশ ও সিঙ্ক করুন"
+          >
+            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-brand-400' : 'text-brand-400'}`} />
+            <span>রাউটার সিঙ্ক</span>
+          </button>
+          <button
+            onClick={openCreateModal}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl font-bold shadow-lg shadow-brand-500/20 transition text-sm"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>{t.btn_add_user}</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter and Search Bar */}
